@@ -1,4 +1,3 @@
-#if !NETSTANDARD
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,11 +12,14 @@ using System.Xml;
 
 namespace FileHelpers.Dynamic
 {
+    using Microsoft.CodeAnalysis;
+    using Microsoft.CodeAnalysis.CSharp;
 #if !NETCOREAPP2_0
-	using System.CodeDom.Compiler;
+    using System.CodeDom.Compiler;
+    using System.Linq;
 
-	/// <summary>The MAIN class to work with runtime defined records.</summary>
-	public abstract class ClassBuilder
+    /// <summary>The MAIN class to work with runtime defined records.</summary>
+    public abstract class ClassBuilder
 	{
 		//---------------------
 		//->  STATIC METHODS
@@ -180,51 +182,94 @@ namespace FileHelpers.Dynamic
 
 			code.Append(classStr);
 
-			CodeDomProvider prov = null;
+			var options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary);
 
-			switch (lang)
+			var compilation = CSharpCompilation.Create(
+				"compilation",
+				new[] { ParseText(code.ToString()) },
+				GetGlobalReferences(),
+				options
+			);
+
+			using (var ms = new MemoryStream())
 			{
-				case NetLanguage.CSharp:
-					prov = CodeDomProvider.CreateProvider("cs");
-					break;
+                var result = compilation.Emit(ms);
 
-				case NetLanguage.VbNet:
-					prov = CodeDomProvider.CreateProvider("vb");
-					break;
-			}
+                if (!result.Success)
+                {
+                    CompilerErrorCollection errors = new CompilerErrorCollection();
+                    var error = new StringBuilder();
+                    error.AppendLine("Error Compiling Expression: ");
+                    foreach (var err in result.Diagnostics)
+                    {
+                        var position = err.Location.GetMappedLineSpan().StartLinePosition;
+                        error.AppendFormat("Line {0}: {1}\n", position, err.GetMessage());
 
-			var cr = prov.CompileAssemblyFromSource(cp, code.ToString());
+                        errors.Add(new CompilerError
+                        {
+                            Column = position.Character,
+                            Line = position.Line,
+                            ErrorNumber = err.Id,
+                            ErrorText = err.ToString(),
+                            IsWarning = err.WarningLevel == (int)DiagnosticSeverity.Warning
+                        });
+                    }
 
-			if (cr.Errors.HasErrors)
-			{
-				var error = new StringBuilder();
-				error.Append("Error Compiling Expression: " + Environment.NewLine);
-				foreach (CompilerError err in cr.Errors)
-					error.AppendFormat("Line {0}: {1}\n", err.Line, err.ErrorText);
-				throw new DynamicCompilationException(error.ToString(), classStr, cr.Errors);
-			}
+                    throw new DynamicCompilationException(error.ToString(), classStr, errors);
+                }
 
-			//            Assembly.Load(cr.CompiledAssembly.);
-			if (className != "")
-				return cr.CompiledAssembly.GetType(className, true, true);
-			else
-			{
-				Type[] ts = cr.CompiledAssembly.GetTypes();
-				if (ts.Length > 0)
+				var assembly = Assembly.Load(ms.ToArray());
+
+				if (className != "")
 				{
-					foreach (var t in ts)
+					return assembly.GetType(className, true, true);
+				} else
+				{
+					Type[] ts = assembly.GetTypes();
+					if (ts.Length > 0)
 					{
-						if (t.FullName.StartsWith("My.My") == false &&
-							t.IsDefined(typeof(TypedRecordAttribute), false))
-							return t;
+						foreach (var t in ts)
+						{
+							if (t.FullName.StartsWith("My.My") == false &&
+								t.IsDefined(typeof(TypedRecordAttribute), false))
+								return t;
+						}
 					}
 				}
 
-				throw new BadUsageException("The compiled assembly does not have any type inside.");
-			}
+                throw new BadUsageException("The compiled assembly does not have any type inside.");
+            }
 		}
 
 		#endregion
+
+		private static SyntaxTree ParseText(string s)
+		{
+			return CSharpSyntaxTree.ParseText(s, new CSharpParseOptions(LanguageVersion.Latest));
+		}
+
+		private static PortableExecutableReference[] GetGlobalReferences()
+		{
+			var assemblies = new[]
+			{
+				typeof(object).Assembly,
+				typeof(Console).Assembly,
+				typeof(FileHelperEngine).Assembly
+			};
+
+			var returnList = assemblies
+				.Select(a => MetadataReference.CreateFromFile(a.Location))
+				.ToList();
+
+			var assemblyPath = Path.GetDirectoryName(typeof(object).Assembly.Location);
+
+            returnList.Add(MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "mscorlib.dll")));
+            returnList.Add(MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.dll")));
+            returnList.Add(MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.Core.dll")));
+            returnList.Add(MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.Runtime.dll")));
+
+            return returnList.ToArray();
+        }
 
 		//public bool AddCurrentDomainReferences { get; set; }
 
@@ -2421,4 +2466,3 @@ namespace FileHelpers.Dynamic
     }
 #endif
 }
-#endif

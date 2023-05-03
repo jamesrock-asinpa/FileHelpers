@@ -1,4 +1,3 @@
-#if !NETSTANDARD
 using System;
 using System.IO;
 using System.Xml;
@@ -150,4 +149,3 @@ namespace FileHelpers.Dynamic
         }
     }
 }
-#endif

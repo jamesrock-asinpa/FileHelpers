@@ -1,6 +1,6 @@
 #if !NETSTANDARD
 using System;
-using System.Data;
+using Microsoft.Data.SqlClient;
 
 namespace FileHelpers.DataLink
 {
@@ -71,7 +71,7 @@ namespace FileHelpers.DataLink
 
         /// <summary>Create a connection object to the database</summary>
         /// <returns>SQL server Connection Object.</returns>
-        protected override sealed IDbConnection CreateConnection()
+        protected override sealed System.Data.IDbConnection CreateConnection()
         {
             string conString;
             if (ConnectionString == string.Empty) {

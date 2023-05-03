@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net40;net45</TargetFrameworks>
+    <TargetFrameworks>net7</TargetFrameworks>
     <Version>3.5.2</Version>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>FileHelpers.snk</AssemblyOriginatorKeyFile>

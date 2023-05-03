@@ -6,8 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FSharp.Compiler;
-using FSharp.Compiler.SourceCodeServices;
+using FSharp.Compiler.CodeAnalysis;
 using Microsoft.FSharp.Control;
 using Microsoft.FSharp.Core;
 

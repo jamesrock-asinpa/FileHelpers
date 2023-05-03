@@ -1,4 +1,3 @@
-#if !NETSTANDARD
 namespace FileHelpers
 {
     /// <summary>Indicates the visibility of a member.</summary>
@@ -17,4 +16,3 @@ namespace FileHelpers
         Private
     }
 }
-#endif

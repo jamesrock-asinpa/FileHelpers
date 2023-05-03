@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net40</TargetFrameworks>
+    <TargetFrameworks>net7</TargetFrameworks>
     <OutputType>Library</OutputType>
     <Platforms>AnyCPU</Platforms>
     <IsPackable>false</IsPackable>
